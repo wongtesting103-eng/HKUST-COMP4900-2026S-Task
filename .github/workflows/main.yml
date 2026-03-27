@@ -24,11 +24,17 @@ jobs:
       # ── Step 1: Validate student.json ────────────────────────────────────────
       - name: Validate student.json
         id: validate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          JSON_FILE="Data/student.json"
+          JSON_FILE="/tmp/student.json"
+          PR_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+          PR_SHA="${{ github.event.pull_request.head.sha }}"
 
-          # Check the file exists at all
-          if [[ ! -f "$JSON_FILE" ]]; then
+          # Read student.json from the incoming PR head commit (not base branch)
+          if ! gh api \
+            "/repos/${PR_REPO}/contents/Data/student.json?ref=${PR_SHA}" \
+            --jq '.content' | tr -d '\n' | base64 --decode > "$JSON_FILE"; then
             echo "valid=false" >> "$GITHUB_OUTPUT"
             {
               echo "## ❌ Student Submission Validation Failed"
